@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+
+{% block title %}Login — AutoVault Secure Vehicle Management{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+    <div class="auth-card glass-panel">
+        <div class="auth-header">
+            <div class="auth-logo-badge">
+                <i data-lucide="shield-check"></i>
+            </div>
+            <h1>AutoVault</h1>
+            <p class="auth-subtitle">Sign in to your secure vehicle vault</p>
+        </div>
+
+        <form method="POST" action="{{ url_for('login') }}" class="auth-form">
+            <div class="form-group">
+                <label for="identifier">
+                    <i data-lucide="user"></i> Username or Email
+                </label>
+                <input 
+                    type="text" 
+                    id="identifier" 
+                    name="identifier" 
+                    class="form-control" 
+                    placeholder="e.g., student or user@domain.com" 
+                    value="{{ identifier or '' }}" 
+                    required 
+                    autofocus
+                >
+            </div>
+
+            <div class="form-group">
+                <div class="label-row">
+                    <label for="password">
+                        <i data-lucide="lock"></i> Password
+                    </label>
+                </div>
+                <div class="password-input-wrapper">
+                    <input 
+                        type="password" 
+                        id="password" 
+                        name="password" 
+                        class="form-control" 
+                        placeholder="Enter your password" 
+                        required
+                    >
+                    <button type="button" class="pwd-toggle-btn" id="pwdToggle" aria-label="Toggle password view">
+                        <i data-lucide="eye" id="pwdToggleIcon"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary btn-block">
+                    <i data-lucide="log-in"></i> Sign In to AutoVault
+                </button>
+            </div>
+        </form>
+
+        <!-- Academic Viva Quick-Fill Helper -->
+        <div class="demo-account-box">
+            <div class="demo-account-title">
+                <i data-lucide="sparkles"></i> Viva / Demo Quick Fill
+            </div>
+            <p class="demo-desc">For examiner evaluation &amp; rapid project demonstration:</p>
+            <button type="button" class="btn btn-secondary btn-sm btn-block" id="demoFillBtn">
+                <i data-lucide="key"></i> Load Demo Credentials (demo@autovault.com)
+            </button>
+        </div>
+
+        <div class="auth-footer">
+            <p>Don't have an account? <a href="{{ url_for('register') }}" class="auth-link">Create Account</a></p>
+        </div>
+
+        <!-- Cyber Security Badge -->
+        <div class="security-stamp">
+            <i data-lucide="lock"></i>
+            <span>Secured with Salted Hashing &bull; Session Hardening &bull; Audit Trail</span>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    // Password toggle
+    const pwdInput = document.getElementById('password');
+    const pwdToggle = document.getElementById('pwdToggle');
+    const pwdToggleIcon = document.getElementById('pwdToggleIcon');
+
+    if (pwdToggle && pwdInput) {
+        pwdToggle.addEventListener('click', () => {
+            if (pwdInput.type === 'password') {
+                pwdInput.type = 'text';
+                pwdToggleIcon.setAttribute('data-lucide', 'eye-off');
+            } else {
+                pwdInput.type = 'password';
+                pwdToggleIcon.setAttribute('data-lucide', 'eye');
+            }
+            lucide.createIcons();
+        });
+    }
+
+    // Demo Fill
+    const demoBtn = document.getElementById('demoFillBtn');
+    if (demoBtn) {
+        demoBtn.addEventListener('click', () => {
+            document.getElementById('identifier').value = 'demo@autovault.com';
+            document.getElementById('password').value = 'AutoVault@2026';
+        });
+    }
+</script>
+{% endblock %}

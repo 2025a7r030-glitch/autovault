@@ -1,0 +1,190 @@
+{% extends "base.html" %}
+
+{% block title %}Fuel Tracker — {{ vehicle.name }} | AutoVault{% endblock %}
+
+{% block content %}
+<div class="page-container">
+    <div class="page-header">
+        <div>
+            <h1 class="page-title">Fuel &amp; Refill Tracker</h1>
+            <p class="page-subtitle">
+                Recording fuel logs for <strong>{{ vehicle.name }}</strong> ({{ vehicle.license_plate }} &bull; Current Odo: {{ '{:,.1f}'.format(vehicle.current_odometer) }} km)
+            </p>
+        </div>
+        <div class="header-actions">
+            <a href="{{ url_for('export_fuel_csv') }}" class="btn btn-secondary">
+                <i data-lucide="download"></i> Export Fuel Logs (CSV)
+            </a>
+        </div>
+    </div>
+
+    <div class="split-content-layout">
+        <!-- Add Fuel Log Form Panel -->
+        <div class="side-form-column">
+            <div class="form-card glass-panel">
+                <div class="card-title">
+                    <i data-lucide="plus-circle"></i>
+                    <h3>Add Refill Entry</h3>
+                </div>
+                <form method="POST" action="{{ url_for('add_fuel_log') }}" class="app-form" id="fuelLogForm">
+                    <div class="form-group">
+                        <label for="date"><i data-lucide="calendar"></i> Date *</label>
+                        <input type="date" id="date" name="date" class="form-control" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="odometer"><i data-lucide="gauge"></i> Current Odometer (km) *</label>
+                        <input type="number" id="odometer" name="odometer" class="form-control" step="0.1" placeholder="e.g. 45280" required>
+                        <small class="form-hint">Previous recorded: {{ '{:,.1f}'.format(vehicle.current_odometer) }} km</small>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="fuel_amount"><i data-lucide="droplet"></i> Fuel (Liters) *</label>
+                            <input type="number" id="fuel_amount" name="fuel_amount" class="form-control" step="0.01" placeholder="e.g. 35.5" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="fuel_price"><i data-lucide="indian-rupee"></i> Price / Liter *</label>
+                            <input type="number" id="fuel_price" name="fuel_price" class="form-control" step="0.01" placeholder="e.g. 102.50" required>
+                        </div>
+                    </div>
+
+                    <div class="cost-preview-box">
+                        <span>Estimated Cost:</span>
+                        <strong id="costPreview">₹0.00</strong>
+                    </div>
+
+                    <div class="form-group checkbox-group">
+                        <label class="custom-checkbox">
+                            <input type="checkbox" name="is_full_tank" value="1" checked>
+                            <span class="checkmark"></span>
+                            <span>Full Tank Refill (Recommended for accurate mileage)</span>
+                        </label>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="notes"><i data-lucide="file-text"></i> Station / Notes (Optional)</label>
+                        <input type="text" id="notes" name="notes" class="form-control" placeholder="e.g., Shell Bunk, highway drive">
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary btn-block">
+                            <i data-lucide="check"></i> Save Fuel Entry
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- History Table Panel -->
+        <div class="main-table-column">
+            <div class="table-card glass-panel">
+                <div class="table-card-header">
+                    <div class="title-with-count">
+                        <i data-lucide="history"></i>
+                        <h3>Refill History</h3>
+                        <span class="count-pill">{{ logs|length }} Entries</span>
+                    </div>
+                    <div class="table-search">
+                        <input type="text" id="filterLogsInput" class="form-control form-control-sm" placeholder="Search by date or notes...">
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    {% if logs %}
+                    <table class="data-table" id="fuelHistoryTable">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Odometer</th>
+                                <th>Volume</th>
+                                <th>Rate</th>
+                                <th>Total Paid</th>
+                                <th>Mileage</th>
+                                <th>Notes</th>
+                                <th class="text-right">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for log in logs %}
+                            <tr>
+                                <td>{{ log.date.strftime('%d %b %Y') }}</td>
+                                <td><strong>{{ '{:,.1f}'.format(log.odometer) }}</strong> km</td>
+                                <td>{{ log.fuel_amount }} L</td>
+                                <td>₹{{ '{:,.2f}'.format(log.fuel_price) }}</td>
+                                <td><span class="cost-tag">₹{{ '{:,.2f}'.format(log.total_cost) }}</span></td>
+                                <td>
+                                    {% if log.mileage %}
+                                    <span class="mileage-badge {% if log.mileage < 12 %}badge-low{% else %}badge-good{% endif %}">
+                                        {{ log.mileage }} km/L
+                                    </span>
+                                    {% else %}
+                                    <span class="text-muted" title="Mileage is calculated between consecutive full tank refills">—</span>
+                                    {% endif %}
+                                </td>
+                                <td><span class="notes-text">{{ log.notes or '—' }}</span></td>
+                                <td class="text-right">
+                                    <form method="POST" action="{{ url_for('delete_fuel_log', log_id=log.id) }}" onsubmit="return confirm('Delete this fuel entry?')">
+                                        <button type="submit" class="btn-icon-danger" title="Delete entry">
+                                            <i data-lucide="trash-2"></i>
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    {% else %}
+                    <div class="empty-state-box">
+                        <i data-lucide="fuel"></i>
+                        <p>No fuel purchases logged yet for this vehicle.</p>
+                        <p class="sub-empty">Add your first fuel log using the form on the left to start calculating mileage.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    // Set default date to today
+    const dateInput = document.getElementById('date');
+    if (dateInput) {
+        dateInput.valueAsDate = new Date();
+    }
+
+    // Dynamic cost calculation preview
+    const amountInput = document.getElementById('fuel_amount');
+    const priceInput = document.getElementById('fuel_price');
+    const costPreview = document.getElementById('costPreview');
+
+    function updatePreview() {
+        const amt = parseFloat(amountInput.value) || 0;
+        const rate = parseFloat(priceInput.value) || 0;
+        const total = (amt * rate).toFixed(2);
+        costPreview.textContent = `₹${Number(total).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+    }
+
+    if (amountInput && priceInput) {
+        amountInput.addEventListener('input', updatePreview);
+        priceInput.addEventListener('input', updatePreview);
+    }
+
+    // Filter table
+    const filterInput = document.getElementById('filterLogsInput');
+    const table = document.getElementById('fuelHistoryTable');
+    if (filterInput && table) {
+        filterInput.addEventListener('input', () => {
+            const query = filterInput.value.toLowerCase();
+            const rows = table.querySelectorAll('tbody tr');
+            rows.forEach(r => {
+                const text = r.textContent.toLowerCase();
+                r.style.display = text.includes(query) ? '' : 'none';
+            });
+        });
+    }
+</script>
+{% endblock %}

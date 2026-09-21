@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vehicle Insights | Fuel & Mileage Tracker</title>
+    <meta name="description" content="A premium tracker for vehicle mileage and fuel expenses">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container">
+        <header class="app-header">
+            <h1>Vehicle Insights</h1>
+            <p>Track your mileage and fuel expenses</p>
+        </header>
+
+        <div class="dashboard">
+            <div class="stat-card">
+                <div class="stat-icon avg-mileage-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                </div>
+                <div class="stat-info">
+                    <h3>Avg Mileage</h3>
+                    <p id="avg-mileage">0 <span class="unit">km/L</span></p>
+                </div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-icon total-dist-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m22 12-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 0-2.8 0L2 16"/><path d="M16 16v-4.6a2 2 0 0 0-.6-1.4l-3-3"/></svg>
+                </div>
+                <div class="stat-info">
+                    <h3>Total Distance</h3>
+                    <p id="total-distance">0 <span class="unit">km</span></p>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon total-exp-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M12 12h.01"/><path d="M16 12h.01"/><path d="M8 12h.01"/></svg>
+                </div>
+                <div class="stat-info">
+                    <h3>Total Expense</h3>
+                    <p id="total-expense"><span class="currency">₹</span>0</p>
+                </div>
+            </div>
+        </div>
+
+        <div id="mileage-warning" class="alert-warning" style="display: none;">
+            <div class="alert-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            </div>
+            <div class="alert-content">
+                <strong>Warning: High Fuel Consumption Detected!</strong>
+                <p>Your recent mileage is unusually low (<span id="alert-mileage-val">0</span> km/l). Please consider checking your tire pressure or scheduling a service.</p>
+            </div>
+            <button id="close-alert-btn" class="close-alert">&times;</button>
+        </div>
+
+        <div id="expense-warning" class="alert-warning" style="display: none;">
+            <div class="alert-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            </div>
+            <div class="alert-content">
+                <strong>Warning: High Monthly Expense!</strong>
+                <p>Your fuel expense this month has crossed ₹4,500 (Current: ₹<span id="alert-expense-val">0</span>).</p>
+            </div>
+            <button id="close-expense-btn" class="close-alert">&times;</button>
+        </div>
+
+        <main class="main-content">
+            <div class="left-column">
+                <section class="form-section glass-panel">
+                    <h2>Add New Log</h2>
+                <form id="tracker-form" class="tracker-form">
+                    <div class="form-group">
+                        <label for="date">Date</label>
+                        <input type="date" id="date" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="odometer">Odometer Reading (km)</label>
+                        <input type="number" id="odometer" placeholder="e.g., 45200" step="0.1" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="fuel-amount">Fuel Amount (Liters)</label>
+                        <input type="number" id="fuel-amount" placeholder="e.g., 35.5" step="0.01" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="fuel-price">Fuel Price per Liter (₹)</label>
+                        <input type="number" id="fuel-price" placeholder="e.g., 102.50" step="0.01" required>
+                    </div>
+                    
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-secondary" id="clear-btn">Clear</button>
+                        <button type="submit" class="btn btn-primary">Save Log</button>
+                    </div>
+                </form>
+            </section>
+
+            <section class="charts-section glass-panel" style="margin-top: 1.5rem;">
+                <h2>Consumption Analysis</h2>
+                <div class="chart-container" style="position: relative; height: 260px; width: 100%; display: flex; justify-content: center; align-items: center;">
+                    <canvas id="consumption-chart"></canvas>
+                </div>
+            </section>
+            </div>
+
+            <section class="history-section glass-panel">
+                <div class="history-header">
+                    <h2>Fuel History Logs</h2>
+                    <button id="clear-all-btn" class="btn btn-danger btn-sm">Clear All</button>
+                </div>
+                <div class="table-container">
+                    <table id="history-table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Odometer</th>
+                                <th>Fuel</th>
+                                <th>Price/L</th>
+                                <th>Total Cost</th>
+                                <th>Mileage</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="history-body">
+                            <!-- Rows will be injected by JavaScript -->
+                        </tbody>
+                    </table>
+                    <div id="empty-state" class="empty-state">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                        <p>No fuel logs yet. Add your first log above.</p>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>

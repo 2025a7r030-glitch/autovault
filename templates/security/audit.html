@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+
+{% block title %}Security &amp; Viva Defense — AutoVault{% endblock %}
+
+{% block content %}
+<div class="page-container">
+    <div class="page-header">
+        <div>
+            <h1 class="page-title">
+                <i data-lucide="shield-check" class="text-cyan"></i> Cyber Security Hub &amp; Viva Guide
+            </h1>
+            <p class="page-subtitle">
+                Comprehensive security architecture, audit logs, and academic viva defense documentation for B.Tech CSE (Cyber Security)
+            </p>
+        </div>
+        <div class="header-actions">
+            <div class="cyber-status-pill">
+                <span class="live-dot"></span>
+                <span>Active Protection: OWASP Top 10 Aligned</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Security Principles Grid (What was implemented and why) -->
+    <div class="sec-overview-grid">
+        <div class="sec-card glass-panel">
+            <div class="sec-icon color-cyan">
+                <i data-lucide="key-round"></i>
+            </div>
+            <h4>Cryptographic Password Hashing</h4>
+            <p>Passwords are never stored in plaintext. Werkzeug uses the modern <code>scrypt</code> / <code>pbkdf2:sha256</code> algorithm with per-user cryptographic salts to resist dictionary &amp; rainbow table attacks.</p>
+            <div class="sec-badge">NIST SP 800-63B</div>
+        </div>
+
+        <div class="sec-card glass-panel">
+            <div class="sec-icon color-indigo">
+                <i data-lucide="shield-alert"></i>
+            </div>
+            <h4>IDOR &amp; Access Control</h4>
+            <p>Prevents Insecure Direct Object References (OWASP A01:2021). All queries for vehicles, fuel logs, and service records strictly filter by <code>session['user_id']</code> and verify asset ownership.</p>
+            <div class="sec-badge">OWASP A01: Broken Access Control</div>
+        </div>
+
+        <div class="sec-card glass-panel">
+            <div class="sec-icon color-emerald">
+                <i data-lucide="database"></i>
+            </div>
+            <h4>SQL Injection Immunity</h4>
+            <p>AutoVault utilizes SQLAlchemy ORM with strictly parameterized queries. Raw string concatenation is eliminated, ensuring user inputs are treated solely as literal values by SQLite.</p>
+            <div class="sec-badge">OWASP A03: Injection</div>
+        </div>
+
+        <div class="sec-card glass-panel">
+            <div class="sec-icon color-amber">
+                <i data-lucide="cookie"></i>
+            </div>
+            <h4>Hardened Session Cookies</h4>
+            <p>Sessions employ <code>HttpOnly=True</code> (preventing client-side JavaScript theft via XSS) and <code>SameSite=Lax</code> (mitigating Cross-Site Request Forgery / CSRF vulnerabilities).</p>
+            <div class="sec-badge">Session Hardening</div>
+        </div>
+    </div>
+
+    <!-- Academic Viva Defense Q&A Card -->
+    <div class="viva-section glass-panel">
+        <div class="viva-header">
+            <div class="title-with-icon">
+                <i data-lucide="graduation-cap" class="text-cyan"></i>
+                <div>
+                    <h3>Examiner Viva Defense Guide</h3>
+                    <p class="sub-viva">Essential questions and answers for your 3rd-semester project evaluation</p>
+                </div>
+            </div>
+            <span class="viva-pill">Viva Reference</span>
+        </div>
+
+        <div class="viva-qa-list">
+            {% for item in viva_qa %}
+            <div class="viva-item">
+                <div class="viva-question-header" onclick="this.parentElement.classList.toggle('open')">
+                    <span class="topic-tag">{{ item.topic }}</span>
+                    <h4>{{ item.question }}</h4>
+                    <i data-lucide="chevron-down" class="viva-chevron"></i>
+                </div>
+                <div class="viva-answer-content">
+                    <p>{{ item.answer }}</p>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Live Security Audit Log -->
+    <div class="table-card glass-panel">
+        <div class="table-card-header">
+            <div class="title-with-count">
+                <i data-lucide="file-clock"></i>
+                <h3>Real-Time Security Audit Log</h3>
+                <span class="count-pill">{{ logs|length }} Logged Events</span>
+            </div>
+            <span class="text-muted small">Tracks auth events, failed attempts, and data modifications</span>
+        </div>
+
+        <div class="table-container">
+            {% if logs %}
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Timestamp (UTC)</th>
+                        <th>Event Type</th>
+                        <th>Client IP</th>
+                        <th>Details</th>
+                        <th>User Agent (Client Fingerprint)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in logs %}
+                    <tr>
+                        <td><span class="text-mono">{{ log.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</span></td>
+                        <td>
+                            {% if log.event_type == 'LOGIN_SUCCESS' %}
+                            <span class="sec-pill pill-success"><i data-lucide="check"></i> LOGIN SUCCESS</span>
+                            {% elif log.event_type == 'LOGIN_FAILED' %}
+                            <span class="sec-pill pill-danger"><i data-lucide="alert-octagon"></i> LOGIN FAILED</span>
+                            {% elif log.event_type == 'REGISTER' %}
+                            <span class="sec-pill pill-info"><i data-lucide="user-plus"></i> REGISTER</span>
+                            {% elif log.event_type == 'LOGOUT' %}
+                            <span class="sec-pill pill-neutral"><i data-lucide="log-out"></i> LOGOUT</span>
+                            {% elif 'DELETE' in log.event_type %}
+                            <span class="sec-pill pill-danger"><i data-lucide="trash-2"></i> {{ log.event_type }}</span>
+                            {% else %}
+                            <span class="sec-pill pill-cyan"><i data-lucide="shield"></i> {{ log.event_type }}</span>
+                            {% endif %}
+                        </td>
+                        <td><span class="text-mono">{{ log.ip_address }}</span></td>
+                        <td>{{ log.details or '—' }}</td>
+                        <td><span class="ua-truncate" title="{{ log.user_agent }}">{{ log.user_agent or 'Unknown' }}</span></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="empty-state-box">
+                <i data-lucide="shield-check"></i>
+                <p>No security audit logs recorded yet.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

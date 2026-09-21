@@ -1,0 +1,176 @@
+{% extends "base.html" %}
+
+{% block title %}Register — AutoVault Secure Vehicle Management{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+    <div class="auth-card glass-panel">
+        <div class="auth-header">
+            <div class="auth-logo-badge">
+                <i data-lucide="shield-plus"></i>
+            </div>
+            <h1>Create AutoVault Account</h1>
+            <p class="auth-subtitle">Encrypted, personalized vehicle data security</p>
+        </div>
+
+        <form method="POST" action="{{ url_for('register') }}" class="auth-form" id="registerForm">
+            <div class="form-group">
+                <label for="username">
+                    <i data-lucide="user"></i> Username
+                </label>
+                <input 
+                    type="text" 
+                    id="username" 
+                    name="username" 
+                    class="form-control" 
+                    placeholder="Choose a username (e.g., rahul_cse)" 
+                    value="{{ username or '' }}" 
+                    required 
+                    autofocus
+                >
+            </div>
+
+            <div class="form-group">
+                <label for="email">
+                    <i data-lucide="mail"></i> Email Address
+                </label>
+                <input 
+                    type="email" 
+                    id="email" 
+                    name="email" 
+                    class="form-control" 
+                    placeholder="e.g., student@university.edu" 
+                    value="{{ email or '' }}" 
+                    required
+                >
+            </div>
+
+            <div class="form-group">
+                <label for="password">
+                    <i data-lucide="lock"></i> Password
+                </label>
+                <input 
+                    type="password" 
+                    id="password" 
+                    name="password" 
+                    class="form-control" 
+                    placeholder="Minimum 8 characters with symbol &amp; number" 
+                    required
+                >
+                <!-- Live Password Strength Meter -->
+                <div class="pwd-meter-container">
+                    <div class="pwd-meter-bar">
+                        <div class="pwd-meter-fill" id="pwdStrengthFill"></div>
+                    </div>
+                    <div class="pwd-meter-text" id="pwdStrengthText">Strength: Too short</div>
+                </div>
+                <div class="pwd-requirements">
+                    <span id="req-len" class="req-item"><i data-lucide="circle"></i> 8+ chars</span>
+                    <span id="req-upper" class="req-item"><i data-lucide="circle"></i> Uppercase</span>
+                    <span id="req-lower" class="req-item"><i data-lucide="circle"></i> Lowercase</span>
+                    <span id="req-num" class="req-item"><i data-lucide="circle"></i> Number</span>
+                    <span id="req-sym" class="req-item"><i data-lucide="circle"></i> Symbol</span>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="confirm_password">
+                    <i data-lucide="check-check"></i> Confirm Password
+                </label>
+                <input 
+                    type="password" 
+                    id="confirm_password" 
+                    name="confirm_password" 
+                    class="form-control" 
+                    placeholder="Re-enter password" 
+                    required
+                >
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary btn-block">
+                    <i data-lucide="user-plus"></i> Register Secured Account
+                </button>
+            </div>
+        </form>
+
+        <div class="auth-footer">
+            <p>Already registered? <a href="{{ url_for('login') }}" class="auth-link">Sign In</a></p>
+        </div>
+
+        <div class="security-stamp">
+            <i data-lucide="shield-check"></i>
+            <span>Compliant with NIST 800-63B Authentication Guidelines</span>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    const pwd = document.getElementById('password');
+    const fill = document.getElementById('pwdStrengthFill');
+    const text = document.getElementById('pwdStrengthText');
+
+    const reqLen = document.getElementById('req-len');
+    const reqUpper = document.getElementById('req-upper');
+    const reqLower = document.getElementById('req-lower');
+    const reqNum = document.getElementById('req-num');
+    const reqSym = document.getElementById('req-sym');
+
+    if (pwd) {
+        pwd.addEventListener('input', () => {
+            const val = pwd.value;
+            let score = 0;
+
+            const hasLen = val.length >= 8;
+            const hasUpper = /[A-Z]/.test(val);
+            const hasLower = /[a-z]/.test(val);
+            const hasNum = /\d/.test(val);
+            const hasSym = /[!@#$%^&*(),.?":{}|<>]/.test(val);
+
+            updateReq(reqLen, hasLen);
+            updateReq(reqUpper, hasUpper);
+            updateReq(reqLower, hasLower);
+            updateReq(reqNum, hasNum);
+            updateReq(reqSym, hasSym);
+
+            if (hasLen) score++;
+            if (hasUpper) score++;
+            if (hasLower) score++;
+            if (hasNum) score++;
+            if (hasSym) score++;
+
+            if (val.length === 0) {
+                fill.style.width = '0%';
+                fill.className = 'pwd-meter-fill';
+                text.textContent = 'Strength: Enter password';
+            } else if (score <= 2) {
+                fill.style.width = '25%';
+                fill.className = 'pwd-meter-fill strength-weak';
+                text.textContent = 'Strength: Weak';
+            } else if (score <= 4) {
+                fill.style.width = '65%';
+                fill.className = 'pwd-meter-fill strength-medium';
+                text.textContent = 'Strength: Moderate';
+            } else {
+                fill.style.width = '100%';
+                fill.className = 'pwd-meter-fill strength-strong';
+                text.textContent = 'Strength: Excellent (CyberSec Approved)';
+            }
+        });
+    }
+
+    function updateReq(el, pass) {
+        if (!el) return;
+        if (pass) {
+            el.classList.add('met');
+            el.querySelector('i').setAttribute('data-lucide', 'check-circle-2');
+        } else {
+            el.classList.remove('met');
+            el.querySelector('i').setAttribute('data-lucide', 'circle');
+        }
+        lucide.createIcons();
+    }
+</script>
+{% endblock %}

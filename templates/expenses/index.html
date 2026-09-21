@@ -1,0 +1,191 @@
+{% extends "base.html" %}
+
+{% block title %}Expenses &amp; Analytics — {{ vehicle.name }} | AutoVault{% endblock %}
+
+{% block content %}
+<div class="page-container">
+    <div class="page-header">
+        <div>
+            <h1 class="page-title">Expenses &amp; Financial Analytics</h1>
+            <p class="page-subtitle">
+                Complete financial footprint and running cost analysis for <strong>{{ vehicle.name }}</strong> ({{ vehicle.license_plate }})
+            </p>
+        </div>
+        <div class="header-actions">
+            <a href="{{ url_for('export_fuel_csv') }}" class="btn btn-secondary">
+                <i data-lucide="file-spreadsheet"></i> Export Fuel Data
+            </a>
+        </div>
+    </div>
+
+    <!-- Financial Stat Summary Cards -->
+    <div class="stat-grid">
+        <div class="stat-card glass-panel">
+            <div class="stat-icon-wrapper color-cyan">
+                <i data-lucide="wallet-cards"></i>
+            </div>
+            <div class="stat-info">
+                <span class="stat-label">Total Expenditure</span>
+                <div class="stat-val">
+                    <span class="stat-currency">₹</span>{{ '{:,.2f}'.format(grand_total) }}
+                </div>
+                <span class="stat-sub">Lifetime expenditure on vehicle</span>
+            </div>
+        </div>
+
+        <div class="stat-card glass-panel">
+            <div class="stat-icon-wrapper color-indigo">
+                <i data-lucide="fuel"></i>
+            </div>
+            <div class="stat-info">
+                <span class="stat-label">Total Fuel Cost</span>
+                <div class="stat-val">
+                    <span class="stat-currency">₹</span>{{ '{:,.2f}'.format(fuel_total) }}
+                </div>
+                <span class="stat-sub">{{ ((fuel_total / grand_total * 100) if grand_total > 0 else 0)|round(1) }}% of overall budget</span>
+            </div>
+        </div>
+
+        <div class="stat-card glass-panel">
+            <div class="stat-icon-wrapper color-emerald">
+                <i data-lucide="wrench"></i>
+            </div>
+            <div class="stat-info">
+                <span class="stat-label">Total Maintenance Cost</span>
+                <div class="stat-val">
+                    <span class="stat-currency">₹</span>{{ '{:,.2f}'.format(service_total) }}
+                </div>
+                <span class="stat-sub">{{ ((service_total / grand_total * 100) if grand_total > 0 else 0)|round(1) }}% of overall budget</span>
+            </div>
+        </div>
+
+        <div class="stat-card glass-panel">
+            <div class="stat-icon-wrapper color-amber">
+                <i data-lucide="calculator"></i>
+            </div>
+            <div class="stat-info">
+                <span class="stat-label">Running Cost / km</span>
+                <div class="stat-val">
+                    <span class="stat-currency">₹</span>{{ ((grand_total / vehicle.current_odometer) if vehicle.current_odometer > 0 else 0.0)|round(2) }}
+                </div>
+                <span class="stat-sub">Total expense / total distance</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Analytics Charts -->
+    <div class="charts-row">
+        <!-- Monthly Spending History -->
+        <div class="chart-card glass-panel">
+            <div class="chart-header">
+                <h3><i data-lucide="bar-chart-2"></i> Monthly Spend Breakdown</h3>
+                <span class="chart-tag">Last 6 Months (INR)</span>
+            </div>
+            <div class="chart-canvas-wrapper">
+                <canvas id="expensesMonthlyChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Category Distribution Doughnut -->
+        <div class="chart-card glass-panel">
+            <div class="chart-header">
+                <h3><i data-lucide="pie-chart"></i> Category Distribution</h3>
+                <span class="chart-tag">Fuel vs. Service Types</span>
+            </div>
+            <div class="chart-canvas-wrapper">
+                <canvas id="categoryDistributionChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', async () => {
+        try {
+            const res = await fetch("{{ url_for('api_analytics') }}");
+            if (!res.ok) return;
+            const data = await res.json();
+
+            // 1. Monthly Spend
+            const monthlyCtx = document.getElementById('expensesMonthlyChart').getContext('2d');
+            new Chart(monthlyCtx, {
+                type: 'bar',
+                data: {
+                    labels: data.monthly.labels,
+                    datasets: [
+                        {
+                            label: 'Fuel Spend',
+                            data: data.monthly.fuel,
+                            backgroundColor: '#06b6d4',
+                            borderRadius: 4
+                        },
+                        {
+                            label: 'Maintenance Spend',
+                            data: data.monthly.service,
+                            backgroundColor: '#8b5cf6',
+                            borderRadius: 4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { labels: { color: '#cbd5e1' } }
+                    },
+                    scales: {
+                        y: {
+                            grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                            ticks: {
+                                color: '#94a3b8',
+                                callback: val => `₹${val}`
+                            }
+                        },
+                        x: {
+                            grid: { display: false },
+                            ticks: { color: '#94a3b8' }
+                        }
+                    }
+                }
+            });
+
+            // 2. Category Doughnut Chart
+            const catCtx = document.getElementById('categoryDistributionChart').getContext('2d');
+            new Chart(catCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: data.categories.labels,
+                    datasets: [{
+                        data: data.categories.values,
+                        backgroundColor: [
+                            '#06b6d4', '#8b5cf6', '#10b981', '#f59e0b', '#ec4899', '#3b82f6', '#64748b'
+                        ],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { color: '#cbd5e1', padding: 12 }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: (ctx) => ` ${ctx.label}: ₹${ctx.parsed}`
+                            }
+                        }
+                    },
+                    cutout: '68%'
+                }
+            });
+
+        } catch (err) {
+            console.error('Expenses analytics error:', err);
+        }
+    });
+</script>
+{% endblock %}

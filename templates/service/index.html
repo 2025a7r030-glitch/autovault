@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+
+{% block title %}Service Records — {{ vehicle.name }} | AutoVault{% endblock %}
+
+{% block content %}
+<div class="page-container">
+    <div class="page-header">
+        <div>
+            <h1 class="page-title">Service &amp; Maintenance Log</h1>
+            <p class="page-subtitle">
+                Keep an auditable digital service book for <strong>{{ vehicle.name }}</strong> ({{ vehicle.license_plate }})
+            </p>
+        </div>
+        <div class="header-actions">
+            <div class="header-stat-pill">
+                <i data-lucide="wallet"></i> Total Service Cost: <strong>₹{{ '{:,.2f}'.format(vehicle.total_service_spent) }}</strong>
+            </div>
+        </div>
+    </div>
+
+    <div class="split-content-layout">
+        <!-- Add Service Form -->
+        <div class="side-form-column">
+            <div class="form-card glass-panel">
+                <div class="card-title">
+                    <i data-lucide="plus-circle"></i>
+                    <h3>Add Service Record</h3>
+                </div>
+                <form method="POST" action="{{ url_for('add_service_record') }}" class="app-form">
+                    <div class="form-group">
+                        <label for="date"><i data-lucide="calendar"></i> Date of Service *</label>
+                        <input type="date" id="date" name="date" class="form-control" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="service_type"><i data-lucide="tool"></i> Service Type *</label>
+                        <select id="service_type" name="service_type" class="form-control" required>
+                            <option value="Periodic Maintenance">Periodic / General Service</option>
+                            <option value="Engine Oil & Filter">Engine Oil &amp; Filter Change</option>
+                            <option value="Brake Inspection & Pads">Brake Inspection &amp; Pads</option>
+                            <option value="Tire Rotation & Balancing">Tire Rotation &amp; Balancing</option>
+                            <option value="Battery Replacement / Check">Battery Replacement / Check</option>
+                            <option value="AC & Cabin Filter">AC &amp; Cabin Air Filter</option>
+                            <option value="Wheel Alignment">Wheel Alignment</option>
+                            <option value="Transmission & Coolant">Transmission &amp; Coolant Flush</option>
+                            <option value="Mechanical Repair">Mechanical Repair / Replacement</option>
+                            <option value="Body & Paint Work">Body &amp; Paint Work</option>
+                            <option value="Other">Other Maintenance</option>
+                        </select>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="odometer"><i data-lucide="gauge"></i> Odometer (km)</label>
+                            <input type="number" id="odometer" name="odometer" class="form-control" step="0.1" value="{{ vehicle.current_odometer }}">
+                        </div>
+                        <div class="form-group">
+                            <label for="cost"><i data-lucide="indian-rupee"></i> Total Cost (₹) *</label>
+                            <input type="number" id="cost" name="cost" class="form-control" step="0.01" placeholder="e.g., 3850" required>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="service_center"><i data-lucide="map-pin"></i> Service Center / Workshop</label>
+                        <input type="text" id="service_center" name="service_center" class="form-control" placeholder="e.g., Apex Honda Authorized Service">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="invoice_no"><i data-lucide="receipt"></i> Invoice / Job Card Number</label>
+                        <input type="text" id="invoice_no" name="invoice_no" class="form-control" placeholder="e.g., INV-2026-9812">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="notes"><i data-lucide="file-text"></i> Work Details &amp; Parts Replaced</label>
+                        <textarea id="notes" name="notes" rows="2" class="form-control" placeholder="Replaced synthetic oil, cleaned air filter, adjusted brake shoe"></textarea>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary btn-block">
+                            <i data-lucide="save"></i> Save Service Record
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Service History Table -->
+        <div class="main-table-column">
+            <div class="table-card glass-panel">
+                <div class="table-card-header">
+                    <div class="title-with-count">
+                        <i data-lucide="wrench"></i>
+                        <h3>Maintenance Timeline</h3>
+                        <span class="count-pill">{{ records|length }} Records</span>
+                    </div>
+                    <div class="table-search">
+                        <input type="text" id="filterServiceInput" class="form-control form-control-sm" placeholder="Filter by type, workshop, invoice...">
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    {% if records %}
+                    <table class="data-table" id="serviceHistoryTable">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Odometer</th>
+                                <th>Service Category</th>
+                                <th>Workshop</th>
+                                <th>Cost</th>
+                                <th>Invoice</th>
+                                <th>Details</th>
+                                <th class="text-right">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for rec in records %}
+                            <tr>
+                                <td>{{ rec.date.strftime('%d %b %Y') }}</td>
+                                <td>{{ '{:,.0f}'.format(rec.odometer) }} km</td>
+                                <td>
+                                    <span class="service-type-badge">{{ rec.service_type }}</span>
+                                </td>
+                                <td>{{ rec.service_center or 'Workshop' }}</td>
+                                <td><span class="cost-tag">₹{{ '{:,.2f}'.format(rec.cost) }}</span></td>
+                                <td><span class="text-mono">{{ rec.invoice_no or '—' }}</span></td>
+                                <td><span class="notes-text">{{ rec.notes or '—' }}</span></td>
+                                <td class="text-right">
+                                    <form method="POST" action="{{ url_for('delete_service_record', record_id=rec.id) }}" onsubmit="return confirm('Delete this maintenance record?')">
+                                        <button type="submit" class="btn-icon-danger" title="Delete record">
+                                            <i data-lucide="trash-2"></i>
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    {% else %}
+                    <div class="empty-state-box">
+                        <i data-lucide="wrench"></i>
+                        <p>No service records found for this vehicle.</p>
+                        <p class="sub-empty">Log regular oil changes, routine checkups, and parts replacements here to retain vehicle resale value.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    const serviceDate = document.getElementById('date');
+    if (serviceDate) {
+        serviceDate.valueAsDate = new Date();
+    }
+
+    const filterInput = document.getElementById('filterServiceInput');
+    const table = document.getElementById('serviceHistoryTable');
+    if (filterInput && table) {
+        filterInput.addEventListener('input', () => {
+            const query = filterInput.value.toLowerCase();
+            const rows = table.querySelectorAll('tbody tr');
+            rows.forEach(r => {
+                const text = r.textContent.toLowerCase();
+                r.style.display = text.includes(query) ? '' : 'none';
+            });
+        });
+    }
+</script>
+{% endblock %}

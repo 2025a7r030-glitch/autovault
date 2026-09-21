@@ -1,0 +1,269 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Vehicles — AutoVault{% endblock %}
+
+{% block content %}
+<div class="page-container">
+    <div class="page-header">
+        <div>
+            <h1 class="page-title">Garage &amp; Vehicles</h1>
+            <p class="page-subtitle">Add, switch, or manage your personal fleet in one secure vault</p>
+        </div>
+        <div class="header-actions">
+            <button type="button" class="btn btn-primary" id="openAddVehicleBtn">
+                <i data-lucide="plus-circle"></i> Add New Vehicle
+            </button>
+        </div>
+    </div>
+
+    <!-- Vehicles List Grid -->
+    <div class="vehicles-grid">
+        {% for v in vehicles %}
+        <div class="vehicle-card glass-panel {% if active_vehicle and active_vehicle.id == v.id %}active-vehicle-card{% endif %}">
+            <div class="vehicle-card-top">
+                <div class="veh-type-badge">
+                    <i data-lucide="{% if 'bike' in v.name.lower() or 'motor' in v.name.lower() %}bike{% else %}car{% endif %}"></i>
+                    <span>{{ v.fuel_type }}</span>
+                </div>
+                {% if active_vehicle and active_vehicle.id == v.id %}
+                <span class="active-badge"><i data-lucide="check-circle-2"></i> Active Vault</span>
+                {% else %}
+                <a href="{{ url_for('select_vehicle', vehicle_id=v.id) }}" class="btn-switch-select">
+                    Switch to This
+                </a>
+                {% endif %}
+            </div>
+
+            <div class="vehicle-card-main">
+                <h2 class="v-card-name">{{ v.name }}</h2>
+                <div class="v-card-sub">{{ v.make }} {{ v.model }} &bull; {{ v.year }}</div>
+                <div class="v-card-plate">{{ v.license_plate }}</div>
+            </div>
+
+            <div class="vehicle-card-metrics">
+                <div class="metric-item">
+                    <span class="m-label">Odometer</span>
+                    <span class="m-val">{{ '{:,.0f}'.format(v.current_odometer) }} km</span>
+                </div>
+                <div class="metric-item">
+                    <span class="m-label">Avg Mileage</span>
+                    <span class="m-val">{{ v.average_mileage }} km/L</span>
+                </div>
+                <div class="metric-item">
+                    <span class="m-label">Total Spent</span>
+                    <span class="m-val">₹{{ '{:,.0f}'.format(v.total_expenses) }}</span>
+                </div>
+            </div>
+
+            <div class="vehicle-card-actions">
+                <a href="{{ url_for('fuel_index') }}" class="btn btn-sm btn-secondary" title="View Fuel Logs">
+                    <i data-lucide="fuel"></i> Fuel
+                </a>
+                <a href="{{ url_for('service_index') }}" class="btn btn-sm btn-secondary" title="View Service Logs">
+                    <i data-lucide="wrench"></i> Service
+                </a>
+                <button type="button" class="btn btn-sm btn-secondary edit-veh-btn" 
+                    data-id="{{ v.id }}"
+                    data-name="{{ v.name }}"
+                    data-make="{{ v.make }}"
+                    data-model="{{ v.model }}"
+                    data-year="{{ v.year }}"
+                    data-plate="{{ v.license_plate }}"
+                    data-fuel="{{ v.fuel_type }}"
+                    data-odo="{{ v.current_odometer }}"
+                    data-date="{{ v.purchase_date.strftime('%Y-%m-%d') if v.purchase_date else '' }}"
+                    title="Edit vehicle details">
+                    <i data-lucide="edit"></i>
+                </button>
+                <form method="POST" action="{{ url_for('delete_vehicle', vehicle_id=v.id) }}" style="display:inline;" onsubmit="return confirm('Are you sure you want to delete this vehicle? All related fuel and service logs will be permanently deleted.')">
+                    <button type="submit" class="btn btn-sm btn-danger" title="Delete vehicle">
+                        <i data-lucide="trash-2"></i>
+                    </button>
+                </form>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Add Vehicle Modal -->
+    <div class="modal-overlay" id="addVehicleModal">
+        <div class="modal-content glass-panel">
+            <div class="modal-header">
+                <h3><i data-lucide="plus-circle"></i> Add Vehicle to AutoVault</h3>
+                <button type="button" class="modal-close" id="closeAddModal">&times;</button>
+            </div>
+            <form method="POST" action="{{ url_for('vehicles') }}" class="modal-form">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="name">Vehicle Nickname / Name *</label>
+                        <input type="text" id="name" name="name" class="form-control" placeholder="e.g., Daily City Car" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="license_plate">License Plate / Reg No. *</label>
+                        <input type="text" id="license_plate" name="license_plate" class="form-control" placeholder="e.g., DL 01 AB 1234" required>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="make">Manufacturer / Make *</label>
+                        <input type="text" id="make" name="make" class="form-control" placeholder="e.g., Honda, Hyundai, Tata" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="model">Model *</label>
+                        <input type="text" id="model" name="model" class="form-control" placeholder="e.g., City, Creta, Nexon" required>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="year">Year of Manufacture *</label>
+                        <input type="number" id="year" name="year" class="form-control" min="1980" max="2030" value="2022" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="fuel_type">Fuel Type *</label>
+                        <select id="fuel_type" name="fuel_type" class="form-control">
+                            <option value="Petrol">Petrol</option>
+                            <option value="Diesel">Diesel</option>
+                            <option value="CNG">CNG</option>
+                            <option value="Electric">Electric</option>
+                            <option value="Hybrid">Hybrid</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="current_odometer">Initial Odometer Reading (km)</label>
+                        <input type="number" id="current_odometer" name="current_odometer" class="form-control" step="0.1" placeholder="e.g., 24500" value="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="purchase_date">Purchase Date (Optional)</label>
+                        <input type="date" id="purchase_date" name="purchase_date" class="form-control">
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" id="cancelAddBtn">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save to Vault</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit Vehicle Modal -->
+    <div class="modal-overlay" id="editVehicleModal">
+        <div class="modal-content glass-panel">
+            <div class="modal-header">
+                <h3><i data-lucide="edit"></i> Edit Vehicle Details</h3>
+                <button type="button" class="modal-close" id="closeEditModal">&times;</button>
+            </div>
+            <form method="POST" id="editVehicleForm" action="" class="modal-form">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="edit_name">Vehicle Nickname *</label>
+                        <input type="text" id="edit_name" name="name" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit_plate">License Plate *</label>
+                        <input type="text" id="edit_plate" name="license_plate" class="form-control" required>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="edit_make">Manufacturer *</label>
+                        <input type="text" id="edit_make" name="make" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit_model">Model *</label>
+                        <input type="text" id="edit_model" name="model" class="form-control" required>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="edit_year">Year *</label>
+                        <input type="number" id="edit_year" name="year" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit_fuel_type">Fuel Type *</label>
+                        <select id="edit_fuel_type" name="fuel_type" class="form-control">
+                            <option value="Petrol">Petrol</option>
+                            <option value="Diesel">Diesel</option>
+                            <option value="CNG">CNG</option>
+                            <option value="Electric">Electric</option>
+                            <option value="Hybrid">Hybrid</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="edit_odo">Odometer Reading (km)</label>
+                        <input type="number" id="edit_odo" name="current_odometer" class="form-control" step="0.1" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit_purchase_date">Purchase Date</label>
+                        <input type="date" id="edit_purchase_date" name="purchase_date" class="form-control">
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" id="cancelEditBtn">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Update Vehicle</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    // Add Modal handlers
+    const addModal = document.getElementById('addVehicleModal');
+    const openAddBtn = document.getElementById('openAddVehicleBtn');
+    const closeAddBtn = document.getElementById('closeAddModal');
+    const cancelAddBtn = document.getElementById('cancelAddBtn');
+
+    if (openAddBtn) {
+        openAddBtn.addEventListener('click', () => addModal.classList.add('active'));
+    }
+    if (closeAddBtn) {
+        closeAddBtn.addEventListener('click', () => addModal.classList.remove('active'));
+    }
+    if (cancelAddBtn) {
+        cancelAddBtn.addEventListener('click', () => addModal.classList.remove('active'));
+    }
+
+    // Edit Modal handlers
+    const editModal = document.getElementById('editVehicleModal');
+    const closeEditBtn = document.getElementById('closeEditModal');
+    const cancelEditBtn = document.getElementById('cancelEditBtn');
+    const editForm = document.getElementById('editVehicleForm');
+
+    document.querySelectorAll('.edit-veh-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const id = btn.dataset.id;
+            editForm.action = `/vehicles/edit/${id}`;
+            document.getElementById('edit_name').value = btn.dataset.name;
+            document.getElementById('edit_plate').value = btn.dataset.plate;
+            document.getElementById('edit_make').value = btn.dataset.make;
+            document.getElementById('edit_model').value = btn.dataset.model;
+            document.getElementById('edit_year').value = btn.dataset.year;
+            document.getElementById('edit_fuel_type').value = btn.dataset.fuel;
+            document.getElementById('edit_odo').value = btn.dataset.odo;
+            document.getElementById('edit_purchase_date').value = btn.dataset.date;
+            editModal.classList.add('active');
+        });
+    });
+
+    if (closeEditBtn) {
+        closeEditBtn.addEventListener('click', () => editModal.classList.remove('active'));
+    }
+    if (cancelEditBtn) {
+        cancelEditBtn.addEventListener('click', () => editModal.classList.remove('active'));
+    }
+</script>
+{% endblock %}

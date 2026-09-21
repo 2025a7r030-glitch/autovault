@@ -1,0 +1,168 @@
+{% extends "base.html" %}
+
+{% block title %}Reminders — {{ vehicle.name }} | AutoVault{% endblock %}
+
+{% block content %}
+<div class="page-container">
+    <div class="page-header">
+        <div>
+            <h1 class="page-title">Smart Alerts &amp; Reminders</h1>
+            <p class="page-subtitle">
+                Track compliance deadlines, insurance renewals, and service milestones for <strong>{{ vehicle.name }}</strong>
+            </p>
+        </div>
+        <div class="header-actions">
+            <button type="button" class="btn btn-primary" id="openReminderModal">
+                <i data-lucide="plus-circle"></i> Create New Reminder
+            </button>
+        </div>
+    </div>
+
+    <!-- Reminders List -->
+    <div class="reminders-grid">
+        {% if reminder_items %}
+            {% for item in reminder_items %}
+            {% set r = item.reminder %}
+            {% set status = item.status %}
+            <div class="reminder-card glass-panel status-card-{{ status|lower|replace(' ', '-') }} {% if r.is_completed %}completed-card{% endif %}">
+                <div class="reminder-card-top">
+                    <span class="category-tag">{{ r.category }}</span>
+                    <span class="status-pill pill-{{ status|lower|replace(' ', '-') }}">
+                        {% if status == 'Overdue' %}
+                        <i data-lucide="alert-octagon"></i> Overdue
+                        {% elif status == 'Due Soon' %}
+                        <i data-lucide="clock"></i> Due Soon
+                        {% elif status == 'Completed' %}
+                        <i data-lucide="check-circle-2"></i> Completed
+                        {% else %}
+                        <i data-lucide="check"></i> Up to Date
+                        {% endif %}
+                    </span>
+                </div>
+
+                <div class="reminder-body">
+                    <h3 class="reminder-title {% if r.is_completed %}text-strike{% endif %}">{{ r.title }}</h3>
+                    
+                    <div class="reminder-triggers">
+                        {% if r.due_date %}
+                        <div class="trigger-row">
+                            <i data-lucide="calendar"></i>
+                            <span>Due Date: <strong>{{ r.due_date.strftime('%d %b %Y') }}</strong></span>
+                        </div>
+                        {% endif %}
+
+                        {% if r.due_odometer %}
+                        <div class="trigger-row">
+                            <i data-lucide="gauge"></i>
+                            <span>Due At Odometer: <strong>{{ '{:,.0f}'.format(r.due_odometer) }} km</strong></span>
+                            <small class="text-muted">(Current: {{ '{:,.0f}'.format(vehicle.current_odometer) }} km)</small>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    {% if r.notes %}
+                    <p class="reminder-notes">{{ r.notes }}</p>
+                    {% endif %}
+                </div>
+
+                <div class="reminder-actions">
+                    <form method="POST" action="{{ url_for('toggle_reminder', reminder_id=r.id) }}">
+                        <button type="submit" class="btn btn-sm {% if r.is_completed %}btn-secondary{% else %}btn-success{% endif %}">
+                            <i data-lucide="{% if r.is_completed %}rotate-ccw{% else %}check{% endif %}"></i>
+                            {{ 'Mark Active' if r.is_completed else 'Mark Done' }}
+                        </button>
+                    </form>
+
+                    <form method="POST" action="{{ url_for('delete_reminder', reminder_id=r.id) }}" onsubmit="return confirm('Delete this reminder?')">
+                        <button type="submit" class="btn-icon-danger" title="Delete Reminder">
+                            <i data-lucide="trash-2"></i>
+                        </button>
+                    </form>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+        <div class="empty-state-box full-width glass-panel">
+            <i data-lucide="bell"></i>
+            <h3>No reminders set for this vehicle</h3>
+            <p>Set automated reminders for Insurance Expiry, Pollution Under Control (PUC) certificate, routine service, or tire changes.</p>
+            <button type="button" class="btn btn-primary" id="openEmptyReminderModal">
+                <i data-lucide="plus-circle"></i> Add Your First Reminder
+            </button>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Create Reminder Modal -->
+    <div class="modal-overlay" id="reminderModal">
+        <div class="modal-content glass-panel">
+            <div class="modal-header">
+                <h3><i data-lucide="bell-plus"></i> Set Smart Vehicle Reminder</h3>
+                <button type="button" class="modal-close" id="closeReminderModal">&times;</button>
+            </div>
+            <form method="POST" action="{{ url_for('add_reminder') }}" class="modal-form">
+                <div class="form-group">
+                    <label for="title">Reminder Title *</label>
+                    <input type="text" id="title" name="title" class="form-control" placeholder="e.g., Annual Comprehensive Insurance Renewal" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="category">Category *</label>
+                    <select id="category" name="category" class="form-control" required>
+                        <option value="Insurance Renewal">Insurance Policy Renewal</option>
+                        <option value="PUC / Emission Test">PUC / Emission Certificate Expiry</option>
+                        <option value="Scheduled Maintenance">Scheduled Maintenance / Service</option>
+                        <option value="Vehicle Fitness / RC">Vehicle Fitness / Registration</option>
+                        <option value="Tire Replacement">Tire Replacement / Rotation</option>
+                        <option value="Battery Health Check">Battery Check / Warranty</option>
+                        <option value="Other">Other Important Milestone</option>
+                    </select>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="due_date">Due By Date (Optional)</label>
+                        <input type="date" id="due_date" name="due_date" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label for="due_odometer">Due By Odometer km (Optional)</label>
+                        <input type="number" id="due_odometer" name="due_odometer" class="form-control" step="100" placeholder="e.g. 50000">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="notes">Notes &amp; Policy / Ref Details</label>
+                    <input type="text" id="notes" name="notes" class="form-control" placeholder="e.g., Policy #POL-99214 with HDFC ERGO">
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" id="cancelReminderBtn">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Reminder</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    const remModal = document.getElementById('reminderModal');
+    const openBtn = document.getElementById('openReminderModal');
+    const emptyBtn = document.getElementById('openEmptyReminderModal');
+    const closeBtn = document.getElementById('closeReminderModal');
+    const cancelBtn = document.getElementById('cancelReminderBtn');
+
+    function openModal() {
+        if (remModal) remModal.classList.add('active');
+    }
+    function closeModal() {
+        if (remModal) remModal.classList.remove('active');
+    }
+
+    if (openBtn) openBtn.addEventListener('click', openModal);
+    if (emptyBtn) emptyBtn.addEventListener('click', openModal);
+    if (closeBtn) closeBtn.addEventListener('click', closeModal);
+    if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
+</script>
+{% endblock %}

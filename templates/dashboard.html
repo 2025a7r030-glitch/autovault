@@ -1,0 +1,352 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard — {{ vehicle.name }} | AutoVault{% endblock %}
+
+{% block content %}
+<div class="dashboard-wrapper">
+    <!-- Page Header & Quick Actions -->
+    <div class="page-header">
+        <div>
+            <h1 class="page-title">Vehicle Dashboard</h1>
+            <p class="page-subtitle">
+                Monitoring <strong>{{ vehicle.name }}</strong> ({{ vehicle.make }} {{ vehicle.model }} &bull; 
+                <span class="plate-pill">{{ vehicle.license_plate }}</span> &bull; {{ vehicle.fuel_type }})
+            </p>
+        </div>
+        <div class="header-actions">
+            <a href="{{ url_for('fuel_index') }}" class="btn btn-primary">
+                <i data-lucide="fuel"></i> Log Fuel
+            </a>
+            <a href="{{ url_for('service_index') }}" class="btn btn-secondary">
+                <i data-lucide="wrench"></i> Log Service
+            </a>
+            <a href="{{ url_for('reminders_index') }}" class="btn btn-secondary">
+                <i data-lucide="bell"></i> New Reminder
+            </a>
+        </div>
+    </div>
+
+    <!-- Active Warnings & Alerts -->
+    {% if low_mileage_warning %}
+    <div class="alert-warning-banner">
+        <div class="alert-banner-icon">
+            <i data-lucide="alert-triangle"></i>
+        </div>
+        <div class="alert-banner-content">
+            <h4>Warning: High Fuel Consumption Detected!</h4>
+            <p>Your recent mileage is unusually low at <strong>{{ latest_mileage_log.mileage }} km/L</strong>. Consider checking tire pressure, spark plugs, or engine tuning.</p>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if monthly_fuel_expense > 4500 %}
+    <div class="alert-warning-banner expense-alert">
+        <div class="alert-banner-icon">
+            <i data-lucide="trending-up"></i>
+        </div>
+        <div class="alert-banner-content">
+            <h4>Notice: High Monthly Fuel Expenditure!</h4>
+            <p>Your recorded fuel expenditure for this month has crossed ₹4,500 (Current: <strong>₹{{ '{:,.2f}'.format(monthly_fuel_expense) }}</strong>).</p>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if active_reminders %}
+    <div class="alert-warning-banner reminder-alert">
+        <div class="alert-banner-icon">
+            <i data-lucide="bell-ring"></i>
+        </div>
+        <div class="alert-banner-content">
+            <h4>Pending Maintenance &amp; Compliance Reminders ({{ active_reminders|length }})</h4>
+            <div class="reminder-pills-row">
+                {% for rem in active_reminders %}
+                <span class="reminder-inline-pill {% if rem.get_status(vehicle.current_odometer) == 'Overdue' %}pill-danger{% else %}pill-warning{% endif %}">
+                    <strong>{{ rem.title }}</strong> 
+                    {% if rem.due_date %}(Due: {{ rem.due_date.strftime('%d %b %Y') }}){% endif %}
+                    {% if rem.due_odometer %}(At {{ '{:,.0f}'.format(rem.due_odometer) }} km){% endif %}
+                </span>
+                {% endfor %}
+            </div>
+        </div>
+        <a href="{{ url_for('reminders_index') }}" class="btn btn-sm btn-secondary">Review</a>
+    </div>
+    {% endif %}
+
+    <!-- Stat Cards Grid -->
+    <div class="stat-grid">
+        <div class="stat-card glass-panel">
+            <div class="stat-icon-wrapper color-cyan">
+                <i data-lucide="gauge"></i>
+            </div>
+            <div class="stat-info">
+                <span class="stat-label">Average Mileage</span>
+                <div class="stat-val">
+                    {{ vehicle.average_mileage }} <span class="stat-unit">km/L</span>
+                </div>
+                <span class="stat-sub">Based on previous tank refills</span>
+            </div>
+        </div>
+
+        <div class="stat-card glass-panel">
+            <div class="stat-icon-wrapper color-indigo">
+                <i data-lucide="navigation"></i>
+            </div>
+            <div class="stat-info">
+                <span class="stat-label">Odometer Reading</span>
+                <div class="stat-val">
+                    {{ '{:,.1f}'.format(vehicle.current_odometer) }} <span class="stat-unit">km</span>
+                </div>
+                <span class="stat-sub">Latest verified mileage mark</span>
+            </div>
+        </div>
+
+        <div class="stat-card glass-panel">
+            <div class="stat-icon-wrapper color-emerald">
+                <i data-lucide="wallet"></i>
+            </div>
+            <div class="stat-info">
+                <span class="stat-label">Total Expenses</span>
+                <div class="stat-val">
+                    <span class="stat-currency">₹</span>{{ '{:,.2f}'.format(vehicle.total_expenses) }}
+                </div>
+                <span class="stat-sub">Fuel: ₹{{ '{:,.0f}'.format(vehicle.total_fuel_spent) }} &bull; Service: ₹{{ '{:,.0f}'.format(vehicle.total_service_spent) }}</span>
+            </div>
+        </div>
+
+        <div class="stat-card glass-panel">
+            <div class="stat-icon-wrapper color-amber">
+                <i data-lucide="calendar-clock"></i>
+            </div>
+            <div class="stat-info">
+                <span class="stat-label">Pending Reminders</span>
+                <div class="stat-val">
+                    {{ active_reminders|length }} <span class="stat-unit">Active</span>
+                </div>
+                <span class="stat-sub">{{ 'Requires attention' if active_reminders|length > 0 else 'All documents up to date' }}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Section -->
+    <div class="charts-row">
+        <div class="chart-card glass-panel">
+            <div class="chart-header">
+                <h3><i data-lucide="line-chart"></i> Mileage Efficiency Trend</h3>
+                <span class="chart-tag">km/L Over Refills</span>
+            </div>
+            <div class="chart-canvas-wrapper">
+                <canvas id="mileageTrendChart"></canvas>
+            </div>
+        </div>
+
+        <div class="chart-card glass-panel">
+            <div class="chart-header">
+                <h3><i data-lucide="bar-chart-3"></i> Monthly Spend Breakdown</h3>
+                <span class="chart-tag">Fuel vs. Maintenance</span>
+            </div>
+            <div class="chart-canvas-wrapper">
+                <canvas id="monthlySpendChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Split Grid: Recent Fuel Logs & Recent Service Records -->
+    <div class="split-grid">
+        <!-- Recent Fuel Logs -->
+        <div class="section-card glass-panel">
+            <div class="section-card-header">
+                <div class="title-with-icon">
+                    <i data-lucide="fuel"></i>
+                    <h3>Recent Fuel Entries</h3>
+                </div>
+                <a href="{{ url_for('fuel_index') }}" class="link-action">View All ({{ vehicle.fuel_logs|length }}) &rarr;</a>
+            </div>
+            <div class="table-container">
+                {% if recent_fuel_logs %}
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Odometer</th>
+                            <th>Fuel</th>
+                            <th>Cost</th>
+                            <th>Mileage</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for log in recent_fuel_logs %}
+                        <tr>
+                            <td>{{ log.date.strftime('%d %b %Y') }}</td>
+                            <td>{{ '{:,.1f}'.format(log.odometer) }} km</td>
+                            <td>{{ log.fuel_amount }} L</td>
+                            <td>₹{{ '{:,.2f}'.format(log.total_cost) }}</td>
+                            <td>
+                                {% if log.mileage %}
+                                <span class="mileage-badge {% if log.mileage < 12 %}badge-low{% else %}badge-good{% endif %}">
+                                    {{ log.mileage }} km/L
+                                </span>
+                                {% else %}
+                                <span class="text-muted">Initial Log</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div class="empty-state-box">
+                    <i data-lucide="fuel"></i>
+                    <p>No fuel purchases logged yet.</p>
+                    <a href="{{ url_for('fuel_index') }}" class="btn btn-sm btn-primary">Add First Fuel Log</a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Recent Service Records -->
+        <div class="section-card glass-panel">
+            <div class="section-card-header">
+                <div class="title-with-icon">
+                    <i data-lucide="wrench"></i>
+                    <h3>Service &amp; Maintenance</h3>
+                </div>
+                <a href="{{ url_for('service_index') }}" class="link-action">View All ({{ vehicle.service_records|length }}) &rarr;</a>
+            </div>
+            <div class="table-container">
+                {% if recent_service_records %}
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Service Type</th>
+                            <th>Center</th>
+                            <th>Cost</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for rec in recent_service_records %}
+                        <tr>
+                            <td>{{ rec.date.strftime('%d %b %Y') }}</td>
+                            <td><strong>{{ rec.service_type }}</strong></td>
+                            <td>{{ rec.service_center or 'Authorized Center' }}</td>
+                            <td>₹{{ '{:,.2f}'.format(rec.cost) }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div class="empty-state-box">
+                    <i data-lucide="wrench"></i>
+                    <p>No maintenance logs yet.</p>
+                    <a href="{{ url_for('service_index') }}" class="btn btn-sm btn-secondary">Log First Service</a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    // Fetch and initialize charts
+    document.addEventListener('DOMContentLoaded', async () => {
+        try {
+            const res = await fetch("{{ url_for('api_analytics') }}");
+            if (!res.ok) return;
+            const data = await res.json();
+
+            // 1. Mileage Trend Chart
+            const mileageCtx = document.getElementById('mileageTrendChart').getContext('2d');
+            new Chart(mileageCtx, {
+                type: 'line',
+                data: {
+                    labels: data.mileage.labels.length ? data.mileage.labels : ['No Data'],
+                    datasets: [{
+                        label: 'Mileage (km/L)',
+                        data: data.mileage.values.length ? data.mileage.values : [0],
+                        borderColor: '#06b6d4',
+                        backgroundColor: 'rgba(6, 182, 212, 0.15)',
+                        borderWidth: 2.5,
+                        fill: true,
+                        tension: 0.35,
+                        pointBackgroundColor: '#06b6d4',
+                        pointRadius: 4,
+                        pointHoverRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: (ctx) => `${ctx.parsed.y} km/L`
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                            ticks: { color: '#94a3b8' }
+                        },
+                        x: {
+                            grid: { display: false },
+                            ticks: { color: '#94a3b8' }
+                        }
+                    }
+                }
+            });
+
+            // 2. Monthly Spend Bar Chart
+            const spendCtx = document.getElementById('monthlySpendChart').getContext('2d');
+            new Chart(spendCtx, {
+                type: 'bar',
+                data: {
+                    labels: data.monthly.labels,
+                    datasets: [
+                        {
+                            label: 'Fuel (₹)',
+                            data: data.monthly.fuel,
+                            backgroundColor: '#06b6d4',
+                            borderRadius: 4
+                        },
+                        {
+                            label: 'Service (₹)',
+                            data: data.monthly.service,
+                            backgroundColor: '#8b5cf6',
+                            borderRadius: 4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            labels: { color: '#cbd5e1' }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                            ticks: {
+                                color: '#94a3b8',
+                                callback: (val) => `₹${val}`
+                            }
+                        },
+                        x: {
+                            grid: { display: false },
+                            ticks: { color: '#94a3b8' }
+                        }
+                    }
+                }
+            });
+
+        } catch (err) {
+            console.error('Analytics chart error:', err);
+        }
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}AutoVault — Secure Vehicle Management{% endblock %}</title>
+    <meta name="description" content="AutoVault - Secure and Personalized Vehicle Management Platform">
+    
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- App Stylesheet -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+    <div class="app-layout">
+        {% if current_user %}
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="brand">
+                    <div class="brand-icon">
+                        <i data-lucide="shield-check"></i>
+                    </div>
+                    <div class="brand-text">
+                        <span class="brand-title">AutoVault</span>
+                        <span class="brand-sub">Secured Vehicle OS</span>
+                    </div>
+                </div>
+                <button class="mobile-close-btn" id="sidebar-close" aria-label="Close menu">
+                    <i data-lucide="x"></i>
+                </button>
+            </div>
+
+            <!-- Vehicle Switcher Widget -->
+            <div class="vehicle-switcher-box">
+                <div class="switcher-label">
+                    <i data-lucide="car"></i>
+                    <span>Active Vehicle</span>
+                </div>
+                {% if user_vehicles %}
+                <div class="custom-dropdown">
+                    <button class="switcher-btn" id="vehicle-dropdown-btn">
+                        <div class="active-veh-details">
+                            <span class="veh-name">{{ active_vehicle.name if active_vehicle else 'Select Vehicle' }}</span>
+                            <span class="veh-sub">{{ active_vehicle.license_plate if active_vehicle else '' }}</span>
+                        </div>
+                        <i data-lucide="chevron-down" class="dropdown-chevron"></i>
+                    </button>
+                    <div class="dropdown-menu" id="vehicle-dropdown-menu">
+                        {% for v in user_vehicles %}
+                        <a href="{{ url_for('select_vehicle', vehicle_id=v.id) }}" class="dropdown-item {% if active_vehicle and active_vehicle.id == v.id %}active{% endif %}">
+                            <div class="dropdown-veh-info">
+                                <span class="d-name">{{ v.name }}</span>
+                                <span class="d-plate">{{ v.make }} {{ v.model }} ({{ v.license_plate }})</span>
+                            </div>
+                            {% if active_vehicle and active_vehicle.id == v.id %}
+                            <i data-lucide="check" class="check-icon"></i>
+                            {% endif %}
+                        </a>
+                        {% endfor %}
+                        <div class="dropdown-divider"></div>
+                        <a href="{{ url_for('vehicles') }}" class="dropdown-item add-veh-link">
+                            <i data-lucide="plus-circle"></i> Add New Vehicle
+                        </a>
+                    </div>
+                </div>
+                {% else %}
+                <a href="{{ url_for('vehicles') }}" class="btn-add-quick">
+                    <i data-lucide="plus"></i> Add Vehicle
+                </a>
+                {% endif %}
+            </div>
+
+            <!-- Navigation Links -->
+            <nav class="nav-links">
+                <a href="{{ url_for('dashboard') }}" class="nav-link {% if request.endpoint == 'dashboard' %}active{% endif %}">
+                    <i data-lucide="layout-dashboard"></i>
+                    <span>Dashboard</span>
+                </a>
+
+                <a href="{{ url_for('fuel_index') }}" class="nav-link {% if request.endpoint == 'fuel_index' %}active{% endif %}">
+                    <i data-lucide="fuel"></i>
+                    <span>Fuel Tracker</span>
+                </a>
+
+                <a href="{{ url_for('service_index') }}" class="nav-link {% if request.endpoint == 'service_index' %}active{% endif %}">
+                    <i data-lucide="wrench"></i>
+                    <span>Service Logs</span>
+                </a>
+
+                <a href="{{ url_for('reminders_index') }}" class="nav-link {% if request.endpoint == 'reminders_index' %}active{% endif %}">
+                    <i data-lucide="bell"></i>
+                    <span>Reminders</span>
+                    {% if pending_alerts_count > 0 %}
+                    <span class="badge-alert">{{ pending_alerts_count }}</span>
+                    {% endif %}
+                </a>
+
+                <a href="{{ url_for('expenses_index') }}" class="nav-link {% if request.endpoint == 'expenses_index' %}active{% endif %}">
+                    <i data-lucide="pie-chart"></i>
+                    <span>Expenses & Analytics</span>
+                </a>
+
+                <a href="{{ url_for('vehicles') }}" class="nav-link {% if request.endpoint == 'vehicles' %}active{% endif %}">
+                    <i data-lucide="sliders"></i>
+                    <span>Manage Vehicles</span>
+                </a>
+
+                <div class="nav-divider"></div>
+
+                <a href="{{ url_for('security_audit') }}" class="nav-link nav-security {% if request.endpoint == 'security_audit' %}active{% endif %}">
+                    <i data-lucide="shield-alert"></i>
+                    <span>Security & Viva</span>
+                    <span class="badge-sec">CyberSec</span>
+                </a>
+            </nav>
+
+            <!-- User Footer in Sidebar -->
+            <div class="sidebar-footer">
+                <div class="user-profile">
+                    <div class="avatar">
+                        {{ current_user.username[0]|upper }}
+                    </div>
+                    <div class="user-details">
+                        <span class="user-name">{{ current_user.username }}</span>
+                        <span class="user-email">{{ current_user.email }}</span>
+                    </div>
+                </div>
+                <a href="{{ url_for('logout') }}" class="logout-btn" title="Sign Out">
+                    <i data-lucide="log-out"></i>
+                </a>
+            </div>
+        </aside>
+        {% endif %}
+
+        <!-- Main Content Area -->
+        <div class="main-wrapper {% if not current_user %}full-screen-auth{% endif %}">
+            {% if current_user %}
+            <!-- Mobile Topbar -->
+            <header class="mobile-topbar">
+                <button class="mobile-menu-btn" id="sidebar-open" aria-label="Open menu">
+                    <i data-lucide="menu"></i>
+                </button>
+                <div class="mobile-brand">
+                    <i data-lucide="shield-check"></i>
+                    <span>AutoVault</span>
+                </div>
+                <div class="mobile-actions">
+                    <a href="{{ url_for('security_audit') }}" class="icon-btn" title="Security Logs">
+                        <i data-lucide="shield"></i>
+                    </a>
+                </div>
+            </header>
+            {% endif %}
+
+            <!-- Flash Notifications -->
+            <div class="toast-container">
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                        <div class="alert alert-{{ category }} animate-slide-in">
+                            <div class="alert-icon">
+                                {% if category == 'success' %}
+                                <i data-lucide="check-circle-2"></i>
+                                {% elif category == 'danger' %}
+                                <i data-lucide="alert-triangle"></i>
+                                {% elif category == 'warning' %}
+                                <i data-lucide="alert-circle"></i>
+                                {% else %}
+                                <i data-lucide="info"></i>
+                                {% endif %}
+                            </div>
+                            <div class="alert-text">{{ message }}</div>
+                            <button class="alert-close" onclick="this.parentElement.remove()">&times;</button>
+                        </div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+            </div>
+
+            <main class="content-body">
+                {% block content %}{% endblock %}
+            </main>
+
+            <footer class="app-footer">
+                <p>&copy; {{ now_year }} AutoVault &bull; Secure &amp; Personalized Vehicle Management System &bull; CSE Cyber Security Academic Project</p>
+            </footer>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script>
+        lucide.createIcons();
+    </script>
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>
