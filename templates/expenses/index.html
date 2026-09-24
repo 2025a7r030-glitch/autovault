@@ -108,7 +108,7 @@
             if (!res.ok) return;
             const data = await res.json();
 
-            // 1. Monthly Spend
+            // 1. Monthly Spend Bar Chart
             const monthlyCtx = document.getElementById('expensesMonthlyChart').getContext('2d');
             new Chart(monthlyCtx, {
                 type: 'bar',
@@ -116,16 +116,18 @@
                     labels: data.monthly.labels,
                     datasets: [
                         {
-                            label: 'Fuel Spend',
+                            label: 'Fuel Spend (₹)',
                             data: data.monthly.fuel,
-                            backgroundColor: '#06b6d4',
-                            borderRadius: 4
+                            backgroundColor: '#3B82F6',
+                            borderRadius: 4,
+                            barPercentage: 0.65
                         },
                         {
-                            label: 'Maintenance Spend',
+                            label: 'Maintenance Spend (₹)',
                             data: data.monthly.service,
-                            backgroundColor: '#8b5cf6',
-                            borderRadius: 4
+                            backgroundColor: '#64748B',
+                            borderRadius: 4,
+                            barPercentage: 0.65
                         }
                     ]
                 },
@@ -133,25 +135,49 @@
                     responsive: true,
                     maintainAspectRatio: false,
                     plugins: {
-                        legend: { labels: { color: '#cbd5e1' } }
+                        legend: { 
+                            position: 'top',
+                            align: 'end',
+                            labels: { 
+                                color: '#94A3B8',
+                                boxWidth: 12,
+                                boxHeight: 12,
+                                usePointStyle: true,
+                                pointStyle: 'circle',
+                                font: { family: "'Inter', sans-serif", size: 11 }
+                            } 
+                        },
+                        tooltip: {
+                            backgroundColor: '#141B24',
+                            titleColor: '#F1F5F9',
+                            bodyColor: '#94A3B8',
+                            borderColor: 'rgba(255, 255, 255, 0.08)',
+                            borderWidth: 1,
+                            padding: 10,
+                            cornerRadius: 6
+                        }
                     },
                     scales: {
                         y: {
-                            grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                            grid: { color: 'rgba(255, 255, 255, 0.035)' },
                             ticks: {
-                                color: '#94a3b8',
-                                callback: val => `₹${val}`
+                                color: '#64748B',
+                                font: { family: "'Inter', sans-serif", size: 11 },
+                                callback: val => `₹${val.toLocaleString()}`
                             }
                         },
                         x: {
                             grid: { display: false },
-                            ticks: { color: '#94a3b8' }
+                            ticks: { 
+                                color: '#64748B',
+                                font: { family: "'Inter', sans-serif", size: 11 }
+                            }
                         }
                     }
                 }
             });
 
-            // 2. Category Doughnut Chart
+            // 2. Category Doughnut Chart (Precision Telemetry)
             const catCtx = document.getElementById('categoryDistributionChart').getContext('2d');
             new Chart(catCtx, {
                 type: 'doughnut',
@@ -160,9 +186,11 @@
                     datasets: [{
                         data: data.categories.values,
                         backgroundColor: [
-                            '#06b6d4', '#8b5cf6', '#10b981', '#f59e0b', '#ec4899', '#3b82f6', '#64748b'
+                            '#3B82F6', '#60A5FA', '#94A3B8', '#10B981', '#F59E0B', '#64748B', '#334155'
                         ],
-                        borderWidth: 0
+                        borderColor: '#161D26',
+                        borderWidth: 2,
+                        hoverOffset: 4
                     }]
                 },
                 options: {
@@ -171,15 +199,30 @@
                     plugins: {
                         legend: {
                             position: 'bottom',
-                            labels: { color: '#cbd5e1', padding: 12 }
+                            labels: { 
+                                color: '#94A3B8', 
+                                padding: 14,
+                                boxWidth: 12,
+                                boxHeight: 12,
+                                usePointStyle: true,
+                                pointStyle: 'circle',
+                                font: { family: "'Inter', sans-serif", size: 11 }
+                            }
                         },
                         tooltip: {
+                            backgroundColor: '#141B24',
+                            titleColor: '#F1F5F9',
+                            bodyColor: '#94A3B8',
+                            borderColor: 'rgba(255, 255, 255, 0.08)',
+                            borderWidth: 1,
+                            padding: 10,
+                            cornerRadius: 6,
                             callbacks: {
-                                label: (ctx) => ` ${ctx.label}: ₹${ctx.parsed}`
+                                label: (ctx) => ` ${ctx.label}: ₹${ctx.parsed.toLocaleString()}`
                             }
                         }
                     },
-                    cutout: '68%'
+                    cutout: '70%'
                 }
             });
 

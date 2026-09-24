@@ -256,8 +256,12 @@
             if (!res.ok) return;
             const data = await res.json();
 
-            // 1. Mileage Trend Chart
+            // 1. Mileage Trend Chart (Automotive Telemetry Curve)
             const mileageCtx = document.getElementById('mileageTrendChart').getContext('2d');
+            const mileageGradient = mileageCtx.createLinearGradient(0, 0, 0, 240);
+            mileageGradient.addColorStop(0, 'rgba(59, 130, 246, 0.18)');
+            mileageGradient.addColorStop(1, 'rgba(59, 130, 246, 0.00)');
+
             new Chart(mileageCtx, {
                 type: 'line',
                 data: {
@@ -265,12 +269,14 @@
                     datasets: [{
                         label: 'Mileage (km/L)',
                         data: data.mileage.values.length ? data.mileage.values : [0],
-                        borderColor: '#06b6d4',
-                        backgroundColor: 'rgba(6, 182, 212, 0.15)',
-                        borderWidth: 2.5,
+                        borderColor: '#3B82F6',
+                        backgroundColor: mileageGradient,
+                        borderWidth: 2,
                         fill: true,
                         tension: 0.35,
-                        pointBackgroundColor: '#06b6d4',
+                        pointBackgroundColor: '#60A5FA',
+                        pointBorderColor: '#161D26',
+                        pointBorderWidth: 2,
                         pointRadius: 4,
                         pointHoverRadius: 6
                     }]
@@ -281,25 +287,38 @@
                     plugins: {
                         legend: { display: false },
                         tooltip: {
+                            backgroundColor: '#141B24',
+                            titleColor: '#F1F5F9',
+                            bodyColor: '#94A3B8',
+                            borderColor: 'rgba(255, 255, 255, 0.08)',
+                            borderWidth: 1,
+                            padding: 10,
+                            cornerRadius: 6,
                             callbacks: {
-                                label: (ctx) => `${ctx.parsed.y} km/L`
+                                label: (ctx) => `Efficiency: ${ctx.parsed.y} km/L`
                             }
                         }
                     },
                     scales: {
                         y: {
-                            grid: { color: 'rgba(255, 255, 255, 0.05)' },
-                            ticks: { color: '#94a3b8' }
+                            grid: { color: 'rgba(255, 255, 255, 0.035)' },
+                            ticks: { 
+                                color: '#64748B',
+                                font: { family: "'Inter', sans-serif", size: 11 }
+                            }
                         },
                         x: {
                             grid: { display: false },
-                            ticks: { color: '#94a3b8' }
+                            ticks: { 
+                                color: '#64748B',
+                                font: { family: "'Inter', sans-serif", size: 11 }
+                            }
                         }
                     }
                 }
             });
 
-            // 2. Monthly Spend Bar Chart
+            // 2. Monthly Spend Bar Chart (Automotive Expense Tracking)
             const spendCtx = document.getElementById('monthlySpendChart').getContext('2d');
             new Chart(spendCtx, {
                 type: 'bar',
@@ -309,14 +328,16 @@
                         {
                             label: 'Fuel (₹)',
                             data: data.monthly.fuel,
-                            backgroundColor: '#06b6d4',
-                            borderRadius: 4
+                            backgroundColor: '#3B82F6',
+                            borderRadius: 4,
+                            barPercentage: 0.65
                         },
                         {
-                            label: 'Service (₹)',
+                            label: 'Maintenance (₹)',
                             data: data.monthly.service,
-                            backgroundColor: '#8b5cf6',
-                            borderRadius: 4
+                            backgroundColor: '#64748B',
+                            borderRadius: 4,
+                            barPercentage: 0.65
                         }
                     ]
                 },
@@ -325,20 +346,42 @@
                     maintainAspectRatio: false,
                     plugins: {
                         legend: {
-                            labels: { color: '#cbd5e1' }
+                            position: 'top',
+                            align: 'end',
+                            labels: { 
+                                color: '#94A3B8',
+                                boxWidth: 12,
+                                boxHeight: 12,
+                                usePointStyle: true,
+                                pointStyle: 'circle',
+                                font: { family: "'Inter', sans-serif", size: 11 }
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: '#141B24',
+                            titleColor: '#F1F5F9',
+                            bodyColor: '#94A3B8',
+                            borderColor: 'rgba(255, 255, 255, 0.08)',
+                            borderWidth: 1,
+                            padding: 10,
+                            cornerRadius: 6
                         }
                     },
                     scales: {
                         y: {
-                            grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                            grid: { color: 'rgba(255, 255, 255, 0.035)' },
                             ticks: {
-                                color: '#94a3b8',
-                                callback: (val) => `₹${val}`
+                                color: '#64748B',
+                                font: { family: "'Inter', sans-serif", size: 11 },
+                                callback: (val) => `₹${val.toLocaleString()}`
                             }
                         },
                         x: {
                             grid: { display: false },
-                            ticks: { color: '#94a3b8' }
+                            ticks: { 
+                                color: '#64748B',
+                                font: { family: "'Inter', sans-serif", size: 11 }
+                            }
                         }
                     }
                 }
