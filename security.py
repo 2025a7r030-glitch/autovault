@@ -6,13 +6,18 @@ from models import db, User, Vehicle, SecurityLog
 def login_required(f):
     """
     Decorator to protect routes from unauthenticated access.
-    Redirects to login page if session does not contain user_id.
+    Redirects to login page if session does not contain a valid user_id in the database.
     """
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if 'user_id' not in session:
             flash('Please log in to access this page.', 'warning')
             return redirect(url_for('login', next=request.url))
+        user = get_current_user()
+        if not user:
+            session.clear()
+            flash('Session expired or account not found. Please log in again.', 'warning')
+            return redirect(url_for('login'))
         return f(*args, **kwargs)
     return decorated_function
 

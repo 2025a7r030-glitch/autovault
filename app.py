@@ -279,6 +279,9 @@ def delete_vehicle(vehicle_id):
 @login_required
 def dashboard():
     user = get_current_user()
+    if not user:
+        session.clear()
+        return redirect(url_for('login'))
     if not user.vehicles:
         flash('Welcome to AutoVault! Let\'s begin by adding your first vehicle.', 'info')
         return redirect(url_for('vehicles'))
